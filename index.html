@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <title>$NAVI - The Jackpot Zone</title>
+    <style>
+        /* Basic Setup */
+        body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; }
+        .ad-container {
+            width: 300px; height: 250px; background-color: #010409;
+            overflow: hidden; position: relative;
+            font-family: 'Orbitron', sans-serif;
+            border: 1px solid #30363d; box-sizing: border-box;
+            user-select: none;
+        }
+
+        /* --- GAME CONTAINER --- */
+        #game-container { position: absolute; width: 100%; height: 100%; opacity: 0; transition: opacity 0.5s; }
+        
+        #meter {
+            position: absolute; left: 30px; top: 5%; bottom: 5%;
+            width: 10px; background: rgba(0, 234, 255, 0.2);
+            border-radius: 5px;
+        }
+        #jackpot-zone {
+            position: absolute; left: 25px;
+            width: 20px;
+            top: 40%; height: 20%;
+            background: rgba(0, 255, 140, 0.2);
+            border: 1px solid rgba(0, 255, 140, 0.5);
+            border-radius: 10px;
+        }
+        /* FIXED: UFO position is now 100% JS controlled via transform. CSS sets initial position only. */
+        #ufo {
+            position: absolute; width: 60px; z-index: 10;
+            left: 35px;
+            top: 0px; /* Let transform handle all Y positioning */
+            transform: translate(-50%, 215px); /* Start at bottom (250px height - 5% margin - half ufo height) */
+        }
+        
+        #multiplier-text {
+            position: absolute; right: 30px; top: 10px;
+            font-size: 24px; color: #fff; text-shadow: 0 0 10px #fff;
+        }
+        #instruction-text {
+            position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 20px; color: #fff; text-shadow: 0 0 10px #fff; opacity: 0;
+            text-align: center;
+            width: 90%;
+        }
+        #cashout-button {
+            position: absolute; top: 65%; left: 50%; transform: translate(-50%, -50%);
+            background: linear-gradient(45deg, #ffae00, #ffea00); color: #010409;
+            font-size: 22px; font-weight: bold; padding: 15px 40px; border-radius: 50px;
+            box-shadow: 0 0 20px #ffea00; z-index: 35; border: none; cursor: pointer;
+            animation: pulse 1.5s infinite;
+        }
+        .obstacle {
+            position: absolute;
+            left: 35px; top: 5%;
+            width: 20px; height: 20px;
+            background: radial-gradient(circle, #ff6600, #993300);
+            border-radius: 50%;
+            box-shadow: 0 0 8px #ff4d4d, inset 2px 2px 3px rgba(255,255,255,0.5);
+            z-index: 15;
+            transform: translateX(-50%);
+        }
+
+        /* --- OUTCOME SCREENS --- */
+        .outcome-screen {
+            position: absolute; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; color: #fff; z-index: 50;
+            background: rgba(1, 4, 9, 0.9); opacity: 0; transition: opacity 0.5s;
+            pointer-events: none;
+        }
+        .outcome-screen.visible { opacity: 1; pointer-events: auto; }
+        .final-cta-button {
+            margin-top: 20px; background: #00eaff; color: #010409; font-size: 18px;
+            padding: 12px 30px; border-radius: 30px; text-decoration: none; font-weight: bold;
+            box-shadow: 0 0 15px #00eaff;
+        }
+        
+        /* --- STATE-BASED ANIMATIONS --- */
+        .is-prelaunch #instruction-text { opacity: 1; }
+        .is-in-zone #jackpot-zone { animation: glowZone 0.5s infinite alternate; }
+        .is-in-zone #instruction-text { opacity: 1; font-size: 28px; color: #00eaff; animation: flashText 0.5s infinite; }
+        
+        @keyframes pulse { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.05); } }
+        @keyframes flashText { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        @keyframes glowZone {
+            from { box-shadow: 0 0 5px rgba(0,255,140,0.5); background: rgba(0, 255, 140, 0.2); }
+            to { box-shadow: 0 0 20px 5px rgba(0,255,140,0.8); background: rgba(0, 255, 140, 0.4); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="ad-container" id="ad-container">
+        
+        <div id="game-container">
+            <div id="meter"></div>
+            <div id="jackpot-zone"></div>
+            <div class="obstacle"></div>
+            <img id="ufo" src="ufo2.png" alt="NAVI UFO">
+            <div id="multiplier-text">1.00x</div>
+            <div id="instruction-text"></div>
+            <button id="cashout-button">CASH OUT</button>
+        </div>
+
+        <div class="outcome-screen" id="success-screen">
+            <img src="alien.gif" alt="NAVI Alien Mascot" width="80">
+            <h2 style="color: #00ff8c; text-shadow: 0 0 10px #00ff8c;">PERFECT TIMING!</h2>
+            <p>9999x POTENTIAL!</p>
+            <a href="https://metawin.com/xummer/" target="_blank" class="final-cta-button">Play For Real</a>
+        </div>
+        <div class="outcome-screen" id="missed-screen">
+            <img src="alien.gif" alt="NAVI Alien Mascot" width="80">
+            <h2 style="color: #ffea00; text-shadow: 0 0 10px #ffea00;">SO CLOSE!</h2>
+            <p>The real jackpot is waiting...</p>
+            <a href="https://metawin.com/xummer/" target="_blank" class="final-cta-button">Play For Real</a>
+        </div>
+        <div class="outcome-screen" id="crashed-screen">
+            <img src="alien.gif" alt="NAVI Alien Mascot" width="80">
+            <h2 style="color: #ff4d4d; text-shadow: 0 0 10px #ff4d4d;">CRASHED!</h2>
+            <p>Timing is everything.</p>
+            <a href="https://metawin.com/xummer/" target="_blank" class="final-cta-button">Play For Real</a>
+        </div>
+    </div>
+
+    <script>
+        const ad = document.getElementById('ad-container');
+        const gameContainer = document.getElementById('game-container');
+        const instructionText = document.getElementById('instruction-text');
+        const cashoutButton = document.getElementById('cashout-button');
+        const multiplierText = document.getElementById('multiplier-text');
+        const ufo = document.getElementById('ufo');
+
+        const successScreen = document.getElementById('success-screen');
+        const missedScreen = document.getElementById('missed-screen');
+        const crashedScreen = document.getElementById('crashed-screen');
+        
+        const adDuration = 12000;
+        const flightDuration = 6000;
+        let gameState = 'idle';
+        let animationFrameId;
+
+        function showOutcome(type) {
+            if (gameState === 'finished') return;
+            gameState = 'finished';
+            window.cancelAnimationFrame(animationFrameId);
+
+            setTimeout(() => {
+                gameContainer.style.opacity = 0;
+                if (type === 'success') successScreen.classList.add('visible');
+                else if (type === 'missed') missedScreen.classList.add('visible');
+                else if (type === 'crashed') crashedScreen.classList.add('visible');
+            }, 300);
+        }
+
+        cashoutButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (gameState === 'idle' || gameState === 'finished') return;
+            
+            if (gameState === 'in-zone') {
+                showOutcome('success');
+            } else {
+                showOutcome('missed');
+            }
+        });
+
+        function masterTimeline() {
+            // --- RESET ---
+            gameState = 'idle';
+            gameContainer.style.opacity = 1;
+            successScreen.classList.remove('visible');
+            missedScreen.classList.remove('visible');
+            crashedScreen.classList.remove('visible');
+            ad.className = 'ad-container is-prelaunch';
+            instructionText.textContent = 'Click CASH OUT in the green zone!';
+            multiplierText.textContent = '1.00x';
+            // FIXED: Set UFO back to its starting transform position
+            ufo.style.transform = 'translate(-50%, 215px)';
+            
+            let startTime;
+
+            function gameLoop(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                let progress = Math.min(elapsed / flightDuration, 1);
+
+                // --- UPDATE MULTIPLIER ---
+                const multiplier = 1 + Math.pow(progress, 3.5) * 500;
+                multiplierText.textContent = `${multiplier.toFixed(2)}x`;
+
+                // --- UPDATE UFO POSITION ---
+                // FIXED: UFO position is now calculated explicitly from a start to an end point.
+                const startY = 215; // Corresponds to bottom: 5%
+                const endY = 12.5;  // Corresponds to top: 5%
+                const currentY = startY + (progress * (endY - startY));
+                ufo.style.transform = `translate(-50%, ${currentY}px)`;
+
+                // --- UPDATE GAME STATE (LOGIC) ---
+                const zoneStartProgress = 0.38;
+                const zoneEndProgress = 0.61;
+
+                if (progress >= zoneStartProgress && progress < zoneEndProgress) {
+                    if (gameState !== 'in-zone') {
+                        gameState = 'in-zone';
+                        ad.className = 'ad-container is-in-zone';
+                        instructionText.textContent = 'CLICK NOW!';
+                    }
+                } else if (progress >= zoneEndProgress && gameState === 'in-zone') {
+                    gameState = 'post-zone';
+                    ad.className = 'ad-container is-climbing';
+                }
+
+                if (progress >= 1) {
+                    showOutcome('crashed');
+                } else if (gameState !== 'finished') {
+                    animationFrameId = requestAnimationFrame(gameLoop);
+                }
+            }
+
+            // --- LAUNCH (2s) ---
+            setTimeout(() => {
+                ad.className = 'ad-container is-climbing';
+                gameState = 'climbing';
+                instructionText.textContent = '';
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }, 2000);
+        }
+
+        masterTimeline();
+        setInterval(masterTimeline, adDuration);
+    </script>
+</body>
+</html>
